@@ -63,7 +63,7 @@ canvas { display: block; width: 100%; height: auto; border-radius: 10px; cursor:
     </div>
     <div class="map-section">
         <div class="card mapbox">
-            <canvas id="map" width="820" height="760"></canvas>
+            <canvas id="map" width="2460" height="2280"></canvas>
             <div id="tip"></div>
             <div class="legend" id="legend"></div>
         </div>
@@ -74,9 +74,8 @@ function initAuthotMap() {
     var cv = document.getElementById('map');
     if (!cv) { setTimeout(initAuthotMap, 50); return; }
 
+    var S = 3;
     var ctx = cv.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
 
     var D = [
         ["01",5.30,46.10,"Ain"],["02",3.62,49.57,"Aisne"],["03",3.33,46.57,"Allier"],
@@ -151,7 +150,9 @@ function initAuthotMap() {
         return COL.NONE;
     }
 
-    var W = 820, H = 760;
+    var W = 820 * S, H = 760 * S;
+    cv.width = W;
+    cv.height = H;
     var lonMin=-6.0, lonMax=9.8, latMin=40.2, latMax=51.4;
     var cosP = Math.cos(46.5 * Math.PI / 180);
     var spanX = (lonMax-lonMin)*cosP, spanY = (latMax-latMin);
@@ -186,7 +187,6 @@ function initAuthotMap() {
         return p[2].startsWith("97") ? clipR_domtom : clipR;
     });
 
-    // Grille spatiale d'accélération
     var gridCell = Math.max(1, Math.floor(median));
     var gridCols = Math.ceil(W/gridCell) + 1;
     var gridRows = Math.ceil(H/gridCell) + 1;
@@ -296,11 +296,11 @@ function initAuthotMap() {
 
     ctx.putImageData(img, 0, 0);
 
-    var baseFont = 11, minFont = 6;
+    var baseFont = 11 * S, minFont = 6 * S;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.shadowColor = "rgba(15,23,42,0.55)";
-    ctx.shadowBlur = 2;
+    ctx.shadowBlur = 2 * S;
 
     for (var i4=0; i4<pts.length; i4++) {
         var code = pts[i4][2];
@@ -336,15 +336,15 @@ function initAuthotMap() {
         var titleText = "DOM-TOM";
         var titleW = ctx.measureText(titleText).width;
         var cellsWidth = (maxPx-minPx) + domMargin*2;
-        var rw = Math.max(cellsWidth, titleW + 24);
+        var rw = Math.max(cellsWidth, titleW + 24 * S);
         var colCenterX = (minPx+maxPx)/2;
         var rx = colCenterX - rw/2;
-        var ry = minPy - domMargin - 24;
-        var rh = (maxPy-minPy) + domMargin*2 + 24;
+        var ry = minPy - domMargin - 24 * S;
+        var rh = (maxPy-minPy) + domMargin*2 + 24 * S;
         ctx.fillStyle = "rgba(201,212,227,0.25)";
         ctx.fillRect(rx, ry, rw, rh);
         ctx.strokeStyle = "rgba(100,116,139,0.5)";
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.5 * S;
         ctx.strokeRect(rx, ry, rw, rh);
         ctx.fillStyle = "#64748b";
         ctx.textAlign = "center";
