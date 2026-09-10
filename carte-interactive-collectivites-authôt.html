@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Carte clients Authôt</title>
+<style>
+:root {
+    --bg: #FEF3E6;
+    --card: #ffffff;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    font-family: 'DroidSans', 'Droid Sans', system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px 16px; background: var(--bg); }
+.wrap { max-width: 1080px; margin: 0 auto; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -.02em; }
+.page-header .sub { color: var(--muted); font-size: 15px; margin: 0; }
+.map-section { margin-bottom: 32px; }
+.card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    position: relative;
+}
+.mapbox { position: relative; }
+canvas { display: block; width: 100%; height: auto; border-radius: 10px; cursor: crosshair; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 13px; height: 13px; border-radius: 4px; display: inline-block; border: 1px solid rgba(15,23,42,.12); }
+#tip {
+    position: absolute;
+    pointer-events: none;
+    background: #0f172a;
+    color: #fff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    max-width: 280px;
+    line-height: 1.45;
+    box-shadow: 0 8px 24px rgba(2,6,23,.35);
+    opacity: 0;
+    transform: translate(-50%, -115%);
+    transition: opacity .08s;
+    z-index: 5;
+}
+#tip b { display: block; font-size: 14px; margin-bottom: 4px; }
+#tip small { color: #94a3b8; display: block; margin-top: 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="page-header">
+        <h1>Une référence (bientôt) dans toute la France</h1>
+        <p class="sub">Visualisation des collectivités et institutions qui utilisent Authôt</p>
+    </div>
+    <div class="map-section">
+        <div class="card mapbox">
+            <canvas id="map" width="820" height="760"></canvas>
+            <div id="tip"></div>
+            <div class="legend" id="legend"></div>
+        </div>
+    </div>
+</div>
+<script>
+function initAuthotMap() {
+    var cv = document.getElementById('map');
+    if (!cv) { setTimeout(initAuthotMap, 50); return; }
+
+    var ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    var D = [
+        ["01",5.30,46.10,"Ain"],["02",3.62,49.57,"Aisne"],["03",3.33,46.57,"Allier"],
+        ["04",6.24,44.00,"Alpes-de-Haute-Provence"],["05",6.20,44.65,"Hautes-Alpes"],
+        ["06",7.20,43.85,"Alpes-Maritimes"],["07",4.60,44.75,"Ardèche"],["08",4.72,49.57,"Ardennes"],
+        ["09",1.60,42.95,"Ariège"],["10",4.08,48.30,"Aube"],["11",2.70,43.20,"Aude"],
+        ["12",2.65,44.30,"Aveyron"],["13",5.20,43.45,"Bouches-du-Rhône"],["14",-0.20,49.05,"Calvados"],
+        ["15",2.60,44.97,"Cantal"],["16",0.20,45.70,"Charente"],["17",-0.60,45.75,"Charente-Maritime"],
+        ["18",2.45,47.00,"Cher"],["19",1.85,45.35,"Corrèze"],["21",4.85,47.40,"Côte-d'Or"],
+        ["22",-2.80,48.55,"Côtes-d'Armor"],["23",1.90,46.10,"Creuse"],["24",0.60,45.10,"Dordogne"],
+        ["25",6.10,47.25,"Doubs"],["26",5.00,44.70,"Drôme"],["27",1.10,49.05,"Eure"],
+        ["28",1.40,48.40,"Eure-et-Loir"],["29",-4.00,48.05,"Finistère"],["30",4.00,43.90,"Gard"],
+        ["31",1.45,43.45,"Haute-Garonne"],["32",0.50,43.70,"Gers"],["33",-0.50,44.85,"Gironde"],
+        ["34",3.60,43.60,"Hérault"],["35",-1.70,48.10,"Ille-et-Vilaine"],["36",1.50,46.60,"Indre"],
+        ["37",0.45,47.25,"Indre-et-Loire"],["38",5.70,45.20,"Isère"],["39",5.60,46.70,"Jura"],
+        ["40",-0.60,43.95,"Landes"],["41",1.25,47.45,"Loir-et-Cher"],["42",4.20,45.50,"Loire"],
+        ["43",3.80,45.05,"Haute-Loire"],["44",-1.40,47.30,"Loire-Atlantique"],["45",2.20,47.90,"Loiret"],
+        ["46",1.45,44.55,"Lot"],["47",0.50,44.30,"Lot-et-Garonne"],["48",3.40,44.50,"Lozère"],
+        ["49",-0.30,47.30,"Maine-et-Loire"],["50",-1.30,49.20,"Manche"],["51",4.10,49.00,"Marne"],
+        ["52",5.20,48.20,"Haute-Marne"],["53",-0.50,48.20,"Mayenne"],["54",6.10,48.70,"Meurthe-et-Moselle"],
+        ["55",5.40,48.80,"Meuse"],["56",-2.80,47.65,"Morbihan"],["57",6.30,49.05,"Moselle"],
+        ["58",3.30,47.10,"Nièvre"],["59",3.10,50.45,"Nord"],["60",2.30,49.30,"Oise"],
+        ["61",0.20,48.60,"Orne"],["62",2.40,50.45,"Pas-de-Calais"],["63",3.05,45.75,"Puy-de-Dôme"],
+        ["64",-0.40,43.25,"Pyrénées-Atlantiques"],["65",0.10,43.15,"Hautes-Pyrénées"],
+        ["66",2.80,42.65,"Pyrénées-Orientales"],["67",7.55,48.55,"Bas-Rhin"],["68",7.30,48.00,"Haut-Rhin"],
+        ["69",4.70,45.75,"Rhône"],["70",6.10,47.60,"Haute-Saône"],["71",4.60,46.60,"Saône-et-Loire"],
+        ["72",0.20,48.00,"Sarthe"],["73",5.90,45.55,"Savoie"],["74",6.30,46.05,"Haute-Savoie"],
+        ["75",2.35,48.86,"Paris"],["76",0.90,49.50,"Seine-Maritime"],["77",2.70,48.70,"Seine-et-Marne"],
+        ["78",1.90,48.80,"Yvelines"],["79",-0.30,46.60,"Deux-Sèvres"],["80",2.20,49.85,"Somme"],
+        ["81",2.30,43.90,"Tarn"],["82",1.10,44.05,"Tarn-et-Garonne"],["83",6.10,43.40,"Var"],
+        ["84",5.00,43.95,"Vaucluse"],["85",-0.80,46.70,"Vendée"],["86",0.35,46.50,"Vienne"],
+        ["87",1.25,45.80,"Haute-Vienne"],["88",6.40,48.10,"Vosges"],["89",3.50,47.80,"Yonne"],
+        ["90",6.90,47.60,"Territoire de Belfort"],["91",2.30,48.55,"Essonne"],
+        ["92",2.25,48.85,"Hauts-de-Seine"],["93",2.45,48.90,"Seine-Saint-Denis"],
+        ["94",2.50,48.80,"Val-de-Marne"],["95",2.10,49.05,"Val-d'Oise"],
+        ["2A",8.78,41.93,"Corse-du-Sud"],["2B",9.45,42.70,"Haute-Corse"],
+        ["971",-5.0,43.0,"Guadeloupe"],["972",-5.0,42.55,"Martinique"],
+        ["973",-5.0,42.10,"Guyane"],["974",-5.0,41.65,"Réunion"],
+        ["975",-5.0,41.20,"Saint-Pierre-et-Miquelon"],["976",-5.0,40.75,"Mayotte"]
+    ];
+
+    var DEPTS_WITH_CLIENTS = [
+        ["01","C"],["03","C"],["06","C"],["06","I"],["12","C"],["16","C"],["22","C"],["24","C"],["27","C"],["28","C"],
+        ["31","C"],["31","I"],["33","C"],["33","I"],["34","C"],["34","I"],["35","C"],["36","I"],["38","C"],["39","D"],
+        ["40","I"],["42","D"],["44","C"],["44","D"],["50","C"],["53","I"],["54","I"],["58","I"],
+        ["59","C"],["62","C"],["62","I"],["63","C"],["64","I"],["66","D"],["67","C"],["67","I"],["68","C"],
+        ["69","C"],["77","I"],["78","C"],["81","C"],["81","I"],["83","D"],["83","I"],["86","C"],["87","C"],
+        ["91","C"],["92","C"],["93","C"],["95","C"]
+    ];
+
+    var COL = {
+        C:[37,99,235], I:[13,148,136], D:[217,119,6],
+        MIX:[124,58,237], NONE:[201,212,227], SEA:[240,245,250]
+    };
+    var COLCSS = { C:"#2563eb", I:"#0d9488", D:"#d97706", MIX:"#7c3aed", NONE:"#c9d4e3" };
+    var TLABEL = {
+        C:"Communes & Villes", I:"Intercommunalités", D:"Départements",
+        NONE:"Département sans client, rejoignez-nous pour compléter la carte !"
+    };
+
+    var meta = {};
+    D.forEach(function(d){ meta[d[0]] = { nom:d[3], types:{} }; });
+    DEPTS_WITH_CLIENTS.forEach(function(dept){
+        if (meta[dept[0]]) meta[dept[0]].types[dept[1]] = true;
+    });
+
+    function deptColor(code) {
+        var m = meta[code];
+        if (!m || Object.keys(m.types).length === 0) return COL.NONE;
+        if (Object.keys(m.types).length > 1) return COL.MIX;
+        for (var k in m.types) return COL[k];
+        return COL.NONE;
+    }
+
+    var W = 820, H = 760;
+    var lonMin=-6.0, lonMax=9.8, latMin=40.2, latMax=51.4;
+    var cosP = Math.cos(46.5 * Math.PI / 180);
+    var spanX = (lonMax-lonMin)*cosP, spanY = (latMax-latMin);
+    var scale = Math.min(W/spanX, H/spanY) * 0.97;
+    var offX = (W - spanX*scale)/2, offY = (H - spanY*scale)/2;
+
+    function proj(lon, lat) {
+        return [offX + (lon-lonMin)*cosP*scale, offY + (latMax-lat)*scale];
+    }
+
+    var pts = D.map(function(d) {
+        var p = proj(d[1], d[2]);
+        return [p[0], p[1], d[0], d[3]];
+    });
+
+    var nnd = [];
+    for (var i = 0; i < pts.length; i++) {
+        var b = 1e9;
+        for (var j = 0; j < pts.length; j++) {
+            if (i === j) continue;
+            var dx = pts[i][0]-pts[j][0], dy = pts[i][1]-pts[j][1];
+            var dd = dx*dx + dy*dy;
+            if (dd < b) b = dd;
+        }
+        nnd.push(Math.sqrt(b));
+    }
+    var nndSorted = nnd.slice().sort(function(a,b){ return a-b; });
+    var median = nndSorted[Math.floor(nndSorted.length/2)];
+    var clipR = median;
+    var clipR_domtom = median * 0.45;
+    var clipRByPt = pts.map(function(p) {
+        return p[2].startsWith("97") ? clipR_domtom : clipR;
+    });
+
+    // Grille spatiale d'accélération
+    var gridCell = Math.max(1, Math.floor(median));
+    var gridCols = Math.ceil(W/gridCell) + 1;
+    var gridRows = Math.ceil(H/gridCell) + 1;
+    var grid = [];
+    for (var gi = 0; gi < gridCols*gridRows; gi++) grid.push([]);
+    for (var p = 0; p < pts.length; p++) {
+        var gcx = Math.floor(pts[p][0]/gridCell);
+        var gcy = Math.floor(pts[p][1]/gridCell);
+        if (gcx<0) gcx=0; if (gcy<0) gcy=0;
+        if (gcx>=gridCols) gcx=gridCols-1;
+        if (gcy>=gridRows) gcy=gridRows-1;
+        grid[gcy*gridCols+gcx].push(p);
+    }
+
+    function nearestPoint(x, y) {
+        var gcx = Math.floor(x/gridCell);
+        var gcy = Math.floor(y/gridCell);
+        var bi = -1, bd = 1e18;
+        for (var dy=-1; dy<=1; dy++) {
+            for (var dx=-1; dx<=1; dx++) {
+                var nx=gcx+dx, ny=gcy+dy;
+                if (nx<0||ny<0||nx>=gridCols||ny>=gridRows) continue;
+                var cell = grid[ny*gridCols+nx];
+                for (var c=0; c<cell.length; c++) {
+                    var pi = cell[c];
+                    var ddx = x-pts[pi][0], ddy = y-pts[pi][1];
+                    var dd = ddx*ddx + ddy*ddy;
+                    if (dd < bd) { bd=dd; bi=pi; }
+                }
+            }
+        }
+        if (bi < 0) {
+            for (var k=0; k<pts.length; k++) {
+                var ddx2 = x-pts[k][0], ddy2 = y-pts[k][1];
+                var dd2 = ddx2*ddx2 + ddy2*ddy2;
+                if (dd2 < bd) { bd=dd2; bi=k; }
+            }
+        }
+        return [bi, bd];
+    }
+
+    var img = ctx.createImageData(W, H);
+    var data = img.data;
+    var owner = new Int16Array(W * H);
+    var inside = new Uint8Array(W * H);
+
+    for (var y = 0; y < H; y++) {
+        for (var x = 0; x < W; x++) {
+            var res = nearestPoint(x, y);
+            var bi = res[0], bd = res[1];
+            var idx = y * W + x;
+            owner[idx] = bi;
+            var localMaxd2 = clipRByPt[bi] * clipRByPt[bi];
+            var inDisk = bd <= localMaxd2 ? 1 : 0;
+            inside[idx] = inDisk;
+            var col = inDisk ? deptColor(pts[bi][2]) : COL.SEA;
+            var o = idx * 4;
+            data[o] = col[0]; data[o+1] = col[1]; data[o+2] = col[2]; data[o+3] = 255;
+        }
+    }
+
+    var outside = new Uint8Array(W * H);
+    var stack = [];
+    function push(x, y) {
+        if (x<0||y<0||x>=W||y>=H) return;
+        var id = y*W + x;
+        if (outside[id] || inside[id]) return;
+        outside[id] = 1;
+        stack.push(id);
+    }
+    for (var xx=0; xx<W; xx++) { push(xx,0); push(xx,H-1); }
+    for (var yy=0; yy<H; yy++) { push(0,yy); push(W-1,yy); }
+    while (stack.length) {
+        var id = stack.pop();
+        var px = id % W, py = (id - px) / W;
+        push(px+1,py); push(px-1,py); push(px,py+1); push(px,py-1);
+    }
+
+    for (var y2=0; y2<H; y2++) {
+        for (var x2=0; x2<W; x2++) {
+            var id2 = y2*W + x2;
+            var o2 = id2 * 4;
+            if (!inside[id2]) {
+                if (outside[id2]) {
+                    data[o2]=COL.SEA[0]; data[o2+1]=COL.SEA[1]; data[o2+2]=COL.SEA[2];
+                } else {
+                    var bi2 = owner[id2];
+                    var col2 = deptColor(pts[bi2][2]);
+                    data[o2]=col2[0]; data[o2+1]=col2[1]; data[o2+2]=col2[2];
+                }
+            }
+        }
+    }
+
+    for (var y3=1; y3<H; y3++) {
+        for (var x3=1; x3<W; x3++) {
+            var id3 = y3*W + x3;
+            if (!outside[id3]) {
+                if ((!outside[id3-1] && owner[id3-1]!==owner[id3]) ||
+                    (!outside[id3-W] && owner[id3-W]!==owner[id3])) {
+                    var o3 = id3 * 4;
+                    data[o3]=255; data[o3+1]=255; data[o3+2]=255;
+                }
+            }
+        }
+    }
+
+    ctx.putImageData(img, 0, 0);
+
+    var baseFont = 11, minFont = 6;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(15,23,42,0.55)";
+    ctx.shadowBlur = 2;
+
+    for (var i4=0; i4<pts.length; i4++) {
+        var code = pts[i4][2];
+        var hasClients = Object.keys(meta[code].types).length > 0;
+        if (!hasClients) continue;
+        var nn = nnd[i4];
+        var fs = Math.min(baseFont, Math.max(minFont, nn * 0.5));
+        ctx.font = "700 " + fs + "px DroidSans,system-ui,sans-serif";
+        var tw = ctx.measureText(code).width;
+        var avail = nn * 0.92;
+        if (tw > avail) {
+            fs = Math.floor(fs * avail / tw);
+            if (fs < minFont) continue;
+            ctx.font = "700 " + fs + "px DroidSans,system-ui,sans-serif";
+        }
+        ctx.fillStyle = "rgba(255,255,255,0.96)";
+        ctx.fillText(code, pts[i4][0], pts[i4][1]);
+    }
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
+
+    var domPts = pts.filter(function(p){ return p[2].startsWith("97"); });
+    if (domPts.length > 0) {
+        var minPx=1e9, maxPx=-1e9, minPy=1e9, maxPy=-1e9;
+        domPts.forEach(function(p){
+            if (p[0]<minPx) minPx=p[0];
+            if (p[0]>maxPx) maxPx=p[0];
+            if (p[1]<minPy) minPy=p[1];
+            if (p[1]>maxPy) maxPy=p[1];
+        });
+        var domMargin = clipR_domtom * 1.4;
+        ctx.font = "700 " + (12 * S) + "px DroidSans,system-ui,sans-serif";
+        var titleText = "DOM-TOM";
+        var titleW = ctx.measureText(titleText).width;
+        var cellsWidth = (maxPx-minPx) + domMargin*2;
+        var rw = Math.max(cellsWidth, titleW + 24);
+        var colCenterX = (minPx+maxPx)/2;
+        var rx = colCenterX - rw/2;
+        var ry = minPy - domMargin - 24;
+        var rh = (maxPy-minPy) + domMargin*2 + 24;
+        ctx.fillStyle = "rgba(201,212,227,0.25)";
+        ctx.fillRect(rx, ry, rw, rh);
+        ctx.strokeStyle = "rgba(100,116,139,0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.fillStyle = "#64748b";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(titleText, rx+rw/2, ry+12*S);
+    }
+
+    var leg = document.getElementById('legend');
+    if (leg) {
+        leg.innerHTML =
+            '<span><i class="dot" style="background:'+COLCSS.C+'"></i>Communes & Villes</span>'+
+            '<span><i class="dot" style="background:'+COLCSS.I+'"></i>Intercommunalités</span>'+
+            '<span><i class="dot" style="background:'+COLCSS.D+'"></i>Départements</span>'+
+            '<span><i class="dot" style="background:'+COLCSS.MIX+'"></i>Mixte (plusieurs types)</span>'+
+            '<span><i class="dot" style="background:'+COLCSS.NONE+'"></i>Département sans client, rejoignez-nous !</span>';
+    }
+
+    var tip = document.getElementById('tip');
+    function nearestLand(px, py) {
+        if (px<0||py<0||px>=W||py>=H) return -1;
+        var id = Math.round(py)*W + Math.round(px);
+        if (outside[id]) return -1;
+        var res = nearestPoint(px, py);
+        return res[0];
+    }
+
+    cv.addEventListener('mousemove', function(e) {
+        var r = cv.getBoundingClientRect();
+        var px = (e.clientX-r.left) * (W/r.width);
+        var py = (e.clientY-r.top) * (H/r.height);
+        var bi = nearestLand(px, py);
+        if (bi < 0) { tip.style.opacity = 0; return; }
+        var code = pts[bi][2], m = meta[code];
+        var types = Object.keys(m.types);
+        var typesHtml;
+        if (types.length > 1) {
+            typesHtml = types.map(function(t) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;"><span style="width:8px;height:8px;border-radius:50%;background:'+COLCSS[t]+';display:inline-block;flex-shrink:0;"></span>'+TLABEL[t]+'</span>';
+            }).join('');
+        } else if (types.length === 1) {
+            typesHtml = '<span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:'+COLCSS[types[0]]+';display:inline-block;flex-shrink:0;"></span>'+TLABEL[types[0]]+'</span>';
+        } else {
+            typesHtml = TLABEL.NONE;
+        }
+        tip.innerHTML = '<b>'+m.nom+' ('+code+')</b><small>'+typesHtml+'</small>';
+        tip.style.left = (e.clientX-r.left) + 'px';
+        tip.style.top = (e.clientY-r.top) + 'px';
+        tip.style.opacity = 1;
+    });
+    cv.addEventListener('mouseleave', function() { tip.style.opacity = 0; });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAuthotMap);
+} else {
+    initAuthotMap();
+}
+</script>
+</body>
+</html>
