@@ -16,36 +16,24 @@
     background: var(--bg);
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
-body { margin: 0; padding: 0; overflow: hidden; background: var(--bg); }
-.wrap { max-width: 1080px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; padding: 18px 16px 14px; }
-.page-header { flex: 0 0 auto; margin-bottom: 14px; }
-.page-header h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -.02em; }
-.page-header .sub { color: var(--muted); font-size: 14px; margin: 0; }
-.map-section { flex: 1 1 auto; min-height: 0; display: flex; }
+html, body { height: 100%; margin: 0; }
+body { overflow: hidden; background: var(--bg); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px; transform-origin: top center; will-change: transform; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -.02em; }
+.page-header .sub { color: var(--muted); font-size: 15px; margin: 0; }
+.map-section { margin-bottom: 32px; }
 .card {
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 16px;
-    padding: 14px;
+    padding: 16px;
     box-shadow: 0 1px 2px rgba(15,23,42,.04);
     position: relative;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
 }
 .mapbox { position: relative; }
-.canvas-wrap {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border-radius: 10px;
-}
-.canvas-wrap canvas { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; cursor: crosshair; }
-.legend { flex: 0 0 auto; display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--muted); }
+canvas { display: block; width: 100%; height: auto; border-radius: 10px; cursor: crosshair; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; font-size: 13px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .dot { width: 13px; height: 13px; border-radius: 4px; display: inline-block; border: 1px solid rgba(15,23,42,.12); }
 #tip {
@@ -76,10 +64,8 @@ body { margin: 0; padding: 0; overflow: hidden; background: var(--bg); }
     </div>
     <div class="map-section">
         <div class="card mapbox">
-            <div class="canvas-wrap">
-                <canvas id="map" width="2460" height="2280"></canvas>
-                <div id="tip"></div>
-            </div>
+            <canvas id="map" width="2460" height="2280"></canvas>
+            <div id="tip"></div>
             <div class="legend" id="legend"></div>
         </div>
     </div>
@@ -410,6 +396,26 @@ function initAuthotMap() {
         tip.style.opacity = 1;
     });
     cv.addEventListener('mouseleave', function() { tip.style.opacity = 0; });
+
+    function fitToViewport() {
+        var el = document.querySelector('.wrap');
+        if (!el) return;
+        var nh = el.scrollHeight;
+        var vw = window.innerWidth || document.documentElement.clientWidth;
+        var vh = window.innerHeight || document.documentElement.clientHeight;
+        var nw = el.scrollWidth;
+        var s = Math.min(vw / nw, vh / nh);
+        if (s < 1) { el.style.transform = 'scale(' + s + ')'; }
+        else { el.style.transform = 'none'; }
+    }
+    fitToViewport();
+    if (window.ResizeObserver) {
+        var ro = new ResizeObserver(fitToViewport);
+        ro.observe(document.documentElement);
+        if (cv) ro.observe(cv);
+    }
+    window.addEventListener('resize', fitToViewport);
+    setTimeout(fitToViewport, 300);
 }
 
 if (document.readyState === 'loading') {
