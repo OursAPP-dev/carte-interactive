@@ -119,20 +119,21 @@ function initAuthotMap() {
     ];
 
     var DEPTS_WITH_CLIENTS = [
-        ["01","C"],["03","C"],["06","C"],["06","I"],["12","C"],["16","C"],["22","C"],["24","C"],["27","C"],["28","C"],
-        ["31","C"],["31","I"],["33","C"],["33","I"],["34","C"],["34","I"],["35","C"],["36","I"],["38","C"],["39","D"],
-        ["40","I"],["42","D"],["44","C"],["44","D"],["50","C"],["53","I"],["54","I"],["58","I"],
-        ["59","C"],["62","C"],["62","I"],["63","C"],["64","I"],["66","D"],["67","C"],["67","I"],["68","C"],
-        ["69","C"],["77","I"],["78","C"],["81","C"],["81","I"],["83","D"],["83","I"],["86","C"],["87","C"],
-        ["91","C"],["92","C"],["93","C"],["95","C"]
+        ["03","C"],["06","C"],["06","I"],["12","C"],["13","T"],["16","C"],["22","C"],["24","C"],["27","C"],["28","C"],
+        ["30","T"],["31","C"],["31","I"],["31","T"],["33","C"],["33","I"],["34","C"],["34","I"],["34","T"],["35","C"],
+        ["36","I"],["38","C"],["38","T"],["40","I"],["44","C"],["44","D"],["50","C"],["53","I"],["59","C"],["60","I"],
+        ["60","T"],["62","C"],["62","I"],["64","I"],["64","T"],["66","D"],["67","C"],["67","I"],["68","C"],["69","C"],
+        ["75","T"],["76","I"],["77","I"],["78","C"],["78","T"],["81","C"],["81","I"],["83","D"],["83","I"],["86","C"],
+        ["87","C"],["91","C"],["92","T"],["93","C"],["93","T"],["94","T"],["95","C"]
     ];
 
     var COL = {
-        C:[37,99,235], I:[13,148,136], D:[217,119,6],
+        C:[37,99,235], I:[13,148,136], D:[217,119,6], T:[219,39,119],
         MIX:[124,58,237], NONE:[201,212,227], SEA:[240,245,250]
     };
-    var COLCSS = { C:"#2563eb", I:"#0d9488", D:"#d97706", MIX:"#7c3aed", NONE:"#c9d4e3" };
+    var COLCSS = { C:"#2563eb", I:"#0d9488", D:"#d97706", T:"#db2777", MIX:"#7c3aed", NONE:"#c9d4e3" };
     var TLABEL = {
+        T:"Institutions",
         C:"Communes & Villes", I:"Intercommunalités", D:"Départements",
         NONE:"Département sans client, rejoignez-nous pour compléter la carte !"
     };
@@ -359,6 +360,7 @@ function initAuthotMap() {
             '<span><i class="dot" style="background:'+COLCSS.C+'"></i>Communes & Villes</span>'+
             '<span><i class="dot" style="background:'+COLCSS.I+'"></i>Intercommunalités</span>'+
             '<span><i class="dot" style="background:'+COLCSS.D+'"></i>Départements</span>'+
+            '<span><i class="dot" style="background:'+COLCSS.T+'"></i>Institutions</span>'+
             '<span><i class="dot" style="background:'+COLCSS.MIX+'"></i>Mixte (plusieurs types)</span>'+
             '<span><i class="dot" style="background:'+COLCSS.NONE+'"></i>Département sans client, rejoignez-nous !</span>';
     }
